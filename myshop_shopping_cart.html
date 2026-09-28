@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyShop – Online Shopping Cart Web Application</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        .product-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .product-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .toast-slide {
+            animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header Navigation -->
+    <header class="sticky top-0 z-30 bg-white/90 dark:bg-slate-800/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Logo -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateTo('home')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+                        <i class="fa-solid fa-bag-shopping text-xl"></i>
+                    </div>
+                    <span class="text-xl font-bold bg-gradient-to-r from-indigo-600 to-indigo-500 bg-clip-text text-transparent">MyShop</span>
+                </div>
+
+                <!-- Navigation Links -->
+                <nav class="hidden md:flex items-center space-x-8 text-sm font-semibold">
+                    <button onclick="navigateTo('home')" id="nav-home" class="nav-link text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition">Home</button>
+                    <button onclick="navigateTo('products')" id="nav-products" class="nav-link text-slate-600 dark:text-slate-300 hover:text-indigo-600 transition">Products</button>
+                    <button onclick="navigateTo('cart')" id="nav-cart" class="nav-link text-slate-600 dark:text-slate-300 hover:text-indigo-600 transition">Cart</button>
+                </nav>
+
+                <!-- Search Bar (Desktop) -->
+                <div class="hidden lg:flex items-center flex-1 max-w-md mx-8 relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 text-slate-400 text-sm"></i>
+                    <input type="text" id="desktop-search" oninput="handleSearch(this.value)" placeholder="Search products (e.g. T-Shirt, Shoes)..." class="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-700 border-none rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
+                </div>
+
+                <!-- Right Actions (Dark Mode, Wishlist, Cart Counter) -->
+                <div class="flex items-center space-x-3 sm:space-x-4">
+                    <!-- Dark Mode Toggle -->
+                    <button onclick="toggleDarkMode()" class="p-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition" title="Toggle Dark/Light Mode">
+                        <i id="theme-toggle-icon" class="fa-solid fa-moon text-lg"></i>
+                    </button>
+
+                    <!-- Wishlist Button -->
+                    <button onclick="toggleWishlistModal()" class="relative p-2.5 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl transition" title="Wishlist">
+                        <i class="fa-regular fa-heart text-lg"></i>
+                        <span id="wishlist-badge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full items-center justify-center">0</span>
+                    </button>
+
+                    <!-- Shopping Cart Button -->
+                    <button onclick="navigateTo('cart')" class="relative flex items-center space-x-2 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium text-sm transition shadow-md shadow-indigo-500/20 active:scale-95">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                        <span class="hidden sm:inline">Cart</span>
+                        <span id="cart-badge" class="bg-white text-indigo-700 text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Search Bar -->
+        <div class="lg:hidden px-4 pb-3">
+            <div class="relative w-full">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-2.5 text-slate-400 text-sm"></i>
+                <input type="text" id="mobile-search" oninput="handleSearch(this.value)" placeholder="Search products..." class="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-700 border-none rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Wrapper -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- Page 1: Home View Section -->
+        <section id="view-home" class="space-y-8">
+            <!-- Hero Banner -->
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-800 text-white p-8 sm:p-12 shadow-xl">
+                <div class="relative z-10 max-w-xl space-y-4">
+                    <span class="inline-block px-3 py-1 bg-white/20 backdrop-blur-md text-xs font-semibold uppercase tracking-wider rounded-full">Summer Special Offer</span>
+                    <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">Elevate Your Everyday Essentials</h1>
+                    <p class="text-indigo-100 text-sm sm:text-base">Shop high quality products with automated instant savings and fast shipping right to your doorstep.</p>
+                    <div class="pt-2 flex flex-wrap gap-3">
+                        <button onclick="navigateTo('products')" class="px-6 py-3 bg-white text-indigo-700 font-semibold text-sm rounded-xl hover:bg-slate-100 transition shadow-lg active:scale-95">
+                            Shop Now <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                        <button onclick="applyBannerCoupon()" class="px-6 py-3 bg-indigo-500/40 border border-white/30 backdrop-blur-md text-white font-semibold text-sm rounded-xl hover:bg-indigo-500/60 transition">
+                            Use Code: <span class="font-mono text-yellow-300">MYSHOP10</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="absolute -right-10 -bottom-10 opacity-20 sm:opacity-30 pointer-events-none text-9xl">
+                    🛍️
+                </div>
+            </div>
+
+            <!-- Categories Filter -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Explore Categories</h2>
+                </div>
+                <div class="flex items-center space-x-2 overflow-x-auto pb-2 custom-scrollbar" id="category-container">
+                    <!-- Dynamically populated categories -->
+                </div>
+            </div>
+
+            <!-- Featured Products Grid Header -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Popular Products</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Handpicked trending items for you</p>
+                </div>
+                <button onclick="navigateTo('products')" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400">View All &rarr;</button>
+            </div>
+
+            <!-- Product Cards Grid -->
+            <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
+                <!-- Products dynamically rendered here -->
+            </div>
+        </section>
+
+        <!-- Page 2: Shopping Cart View Section -->
+        <section id="view-cart" class="hidden space-y-6">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4">
+                <div>
+                    <h1 class="text-2xl font-bold">Shopping Cart</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Manage items and proceed to instant checkout</p>
+                </div>
+                <button onclick="navigateTo('products')" class="text-xs font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 flex items-center">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> Continue Shopping
+                </button>
+            </div>
+
+            <div id="cart-container" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Cart Items List (Left Column) -->
+                <div class="lg:col-span-2 space-y-4" id="cart-items-wrapper">
+                    <!-- Dynamic cart items list rendered here -->
+                </div>
+
+                <!-- Order Summary Side Panel (Right Column) -->
+                <div class="space-y-4">
+                    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-5">
+                        <h2 class="text-lg font-bold border-b border-slate-100 dark:border-slate-700 pb-3">Order Summary</h2>
+
+                        <div class="space-y-3 text-sm">
+                            <div class="flex justify-between text-slate-600 dark:text-slate-300">
+                                <span>Subtotal</span>
+                                <span id="summary-subtotal" class="font-medium">₹0</span>
+                            </div>
+
+                            <div class="flex justify-between text-slate-600 dark:text-slate-300">
+                                <span class="flex items-center">
+                                    Delivery Charge
+                                    <i class="fa-solid fa-circle-info text-xs ml-1 text-slate-400" title="Free delivery on orders over ₹1,000"></i>
+                                </span>
+                                <span id="summary-delivery" class="font-medium">₹0</span>
+                            </div>
+
+                            <div id="discount-row" class="hidden flex justify-between text-emerald-600 dark:text-emerald-400">
+                                <span>Coupon Discount (10%)</span>
+                                <span id="summary-discount" class="font-medium">-₹0</span>
+                            </div>
+
+                            <div class="pt-3 border-t border-slate-100 dark:border-slate-700 flex justify-between text-base font-bold text-slate-900 dark:text-white">
+                                <span>Grand Total</span>
+                                <span id="summary-grand-total" class="text-indigo-600 dark:text-indigo-400">₹0</span>
+                            </div>
+                        </div>
+
+                        <!-- Coupon Input Field -->
+                        <div class="pt-2">
+                            <label class="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Have a Coupon Code?</label>
+                            <div class="flex space-x-2">
+                                <input type="text" id="coupon-code-input" placeholder="MYSHOP10" class="flex-1 uppercase text-xs px-3 py-2 bg-slate-100 dark:bg-slate-700 border-none rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <button onclick="applyCoupon()" class="px-4 py-2 bg-slate-800 dark:bg-slate-600 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl transition">Apply</button>
+                            </div>
+                            <p id="coupon-message" class="text-[11px] mt-1 hidden"></p>
+                        </div>
+
+                        <button onclick="openCheckoutModal()" id="btn-checkout" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition shadow-lg shadow-indigo-500/25 active:scale-[0.98]">
+                            <i class="fa-solid fa-lock mr-2"></i> Proceed to Checkout
+                        </button>
+
+                        <div class="flex items-center justify-center space-x-4 text-xs text-slate-400 pt-2">
+                            <span><i class="fa-solid fa-shield-halved text-emerald-500"></i> Secure Checkout</span>
+                            <span><i class="fa-solid fa-truck-fast text-indigo-500"></i> Instant Dispatch</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Checkout Modal -->
+    <div id="checkout-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl relative border border-slate-200 dark:border-slate-700 my-8">
+            <button onclick="closeCheckoutModal()" class="absolute top-5 right-5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+
+            <h2 class="text-xl font-bold mb-1">Complete Order</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">Enter your details to finalize the purchase.</p>
+
+            <form id="checkout-form" onsubmit="handlePlaceOrder(event)" class="space-y-4 text-sm">
+                <div>
+                    <label class="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">Full Name</label>
+                    <input type="text" required id="cust-name" placeholder="John Doe" class="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl border-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">Email Address</label>
+                    <input type="email" required id="cust-email" placeholder="john@example.com" class="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl border-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-300">Shipping Address</label>
+                    <textarea required id="cust-address" rows="2" placeholder="Street, City, Pincode" class="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-700 rounded-xl border-none focus:ring-2 focus:ring-indigo-500 text-sm"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold mb-2 text-slate-600 dark:text-slate-300">Payment Method</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="flex items-center p-3 border border-indigo-500 dark:border-indigo-400 rounded-xl bg-indigo-50/50 dark:bg-indigo-900/20 cursor-pointer">
+                            <input type="radio" name="payment" value="cod" checked class="text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-xs font-medium">Cash on Delivery</span>
+                        </label>
+                        <label class="flex items-center p-3 border border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                            <input type="radio" name="payment" value="upi" class="text-indigo-600 focus:ring-indigo-500">
+                            <span class="ml-2 text-xs font-medium">UPI / Online</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 dark:border-slate-700">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-xs text-slate-500">Total Amount Payable</span>
+                        <span id="checkout-payable-amount" class="text-lg font-bold text-indigo-600 dark:text-indigo-400">₹0</span>
+                    </div>
+                    <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-500/25">
+                        Confirm & Place Order
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Order Confirmation Screen Modal -->
+    <div id="order-confirm-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-8 text-center shadow-2xl relative border border-slate-200 dark:border-slate-700 transform transition-all">
+            <div class="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">
+                🎉
+            </div>
+            <h2 class="text-2xl font-extrabold text-slate-900 dark:text-white mb-2">Order Placed Successfully!</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-300 mb-4">Thank you for shopping with us. Your order <span id="confirm-order-id" class="font-mono font-bold text-indigo-600 dark:text-indigo-400">#MS-10000</span> has been received.</p>
+            <p class="text-xs text-slate-400 mb-6">A confirmation receipt has been sent to your registered email address.</p>
+
+            <button onclick="closeOrderConfirmModal()" class="w-full py-3 bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-semibold text-sm rounded-xl transition">
+                Continue Shopping
+            </button>
+        </div>
+    </div>
+
+    <!-- Wishlist Modal -->
+    <div id="wishlist-modal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative border border-slate-200 dark:border-slate-700">
+            <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100 dark:border-slate-700">
+                <h2 class="text-lg font-bold flex items-center"><i class="fa-solid fa-heart text-red-500 mr-2"></i> My Wishlist</h2>
+                <button onclick="toggleWishlistModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div id="wishlist-items-container" class="max-h-80 overflow-y-auto space-y-3 custom-scrollbar pr-1">
+                <!-- Wishlist items populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- Footer -->
+    <footer class="mt-auto bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-6 transition-colors">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 dark:text-slate-400 space-y-2">
+            <p>&copy; 2026 <strong>MyShop</strong> – Online Shopping Cart Web Application. .</p>
+            <p class="space-x-4">
+                <span><i class="fa-solid fa-code text-indigo-500"></i> </span>
+                <span><i class="fa-solid fa-bolt text-amber-500"></i> Instant State Calculation</span>
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // --- 1. PRODUCT DATA ---
+        const PRODUCTS = [
+            { id: 1, name: 'T-Shirt', price: 499, category: 'Clothing', icon: '👕', rating: 4.5, description: 'Premium cotton classic fit t-shirt.' },
+            { id: 2, name: 'Shoes', price: 999, category: 'Footwear', icon: '👟', rating: 4.8, description: 'Lightweight comfortable everyday sneakers.' },
+            { id: 3, name: 'Bag', price: 699, category: 'Accessories', icon: '🎒', rating: 4.2, description: 'Durable travel and laptop backpack.' },
+            { id: 4, name: 'Watch', price: 1299, category: 'Accessories', icon: '⌚', rating: 4.7, description: 'Elegant luxury analog wrist watch.' },
+            { id: 5, name: 'Headphones', price: 799, category: 'Electronics', icon: '🎧', rating: 4.6, description: 'Wireless bass boosted stereo headphones.' },
+            { id: 6, name: 'Sunglasses', price: 599, category: 'Accessories', icon: '👓', rating: 4.4, description: 'Stylish UV protection polaroid sunglasses.' }
+        ];
+
+        // --- 2. STATE MANAGEMENT ---
+        let state = {
+            cart: JSON.parse(localStorage.getItem('myshop_cart')) || [],
+            wishlist: JSON.parse(localStorage.getItem('myshop_wishlist')) || [],
+            activeCategory: 'All',
+            searchQuery: '',
+            appliedCoupon: false,
+            couponDiscountRate: 0.10, // 10% discount
+            currentView: 'home'
+        };
+
+        // --- 3. INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initCategories();
+            renderProducts();
+            updateCartBadge();
+            updateWishlistBadge();
+            renderCartView();
+            initTheme();
+        });
+
+        // --- 4. THEME (DARK MODE) CONTROLLER ---
+        function initTheme() {
+            if (localStorage.getItem('myshop_theme') === 'dark' || 
+                (!('myshop_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('theme-toggle-icon').className = 'fa-solid fa-sun text-lg text-amber-400';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('theme-toggle-icon').className = 'fa-solid fa-moon text-lg';
+            }
+        }
+
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('myshop_theme', isDark ? 'dark' : 'light');
+            document.getElementById('theme-toggle-icon').className = isDark 
+                ? 'fa-solid fa-sun text-lg text-amber-400' 
+                : 'fa-solid fa-moon text-lg';
+        }
+
+        // --- 5. NAVIGATION CONTROLLER ---
+        function navigateTo(viewName) {
+            state.currentView = viewName;
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-cart').classList.add('hidden');
+
+            // Reset navigation active highlights
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('text-indigo-600', 'dark:text-indigo-400'));
+
+            if (viewName === 'home' || viewName === 'products') {
+                document.getElementById('view-home').classList.remove('hidden');
+                document.getElementById('nav-' + viewName).classList.add('text-indigo-600', 'dark:text-indigo-400');
+                if(viewName === 'products') {
+                    window.scrollTo({ top: 400, behavior: 'smooth' });
+                } else {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            } else if (viewName === 'cart') {
+                document.getElementById('view-cart').classList.remove('hidden');
+                document.getElementById('nav-cart').classList.add('text-indigo-600', 'dark:text-indigo-400');
+                renderCartView();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        // --- 6. CATEGORY & SEARCH FILTERING ---
+        function initCategories() {
+            const categories = ['All', ...new Set(PRODUCTS.map(p => p.category))];
+            const container = document.getElementById('category-container');
+            container.innerHTML = categories.map(cat => `
+                <button onclick="setCategory('${cat}')" 
+                        class="category-btn text-xs font-semibold px-4 py-2 rounded-xl transition whitespace-nowrap ${
+                            state.activeCategory === cat 
+                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/20' 
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                        }">
+                    ${cat}
+                </button>
+            `).join('');
+        }
+
+        function setCategory(cat) {
+            state.activeCategory = cat;
+            initCategories();
+            renderProducts();
+        }
+
+        function handleSearch(query) {
+            state.searchQuery = query.toLowerCase().trim();
+            renderProducts();
+        }
+
+        // --- 7. RENDER PRODUCTS ---
+        function renderProducts() {
+            const grid = document.getElementById('product-grid');
+            const filtered = PRODUCTS.filter(p => {
+                const matchesCategory = state.activeCategory === 'All' || p.category === state.activeCategory;
+                const matchesSearch = p.name.toLowerCase().includes(state.searchQuery) || p.category.toLowerCase().includes(state.searchQuery);
+                return matchesCategory && matchesSearch;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-12 text-center text-slate-400 space-y-2">
+                        <i class="fa-solid fa-magnifying-glass-minus text-4xl mb-2"></i>
+                        <p class="font-medium text-base">No products match your search/filter criteria.</p>
+                        <button onclick="setCategory('All'); handleSearch('');" class="text-xs text-indigo-600 dark:text-indigo-400 font-semibold underline">Reset filters</button>
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(product => {
+                const isWishlisted = state.wishlist.some(id => id === product.id);
+                return `
+                    <div class="product-card bg-white dark:bg-slate-800 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 overflow-hidden shadow-sm flex flex-col justify-between p-5">
+                        <div>
+                            <!-- Header with Tag and Wishlist button -->
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2.5 py-1 rounded-md">
+                                    ${product.category}
+                                </span>
+                                <button onclick="toggleWishlist(${product.id})" class="text-slate-400 hover:text-red-500 transition">
+                                    <i class="${isWishlisted ? 'fa-solid text-red-500' : 'fa-regular'} fa-heart text-lg"></i>
+                                </button>
+                            </div>
+
+                            <!-- Product Icon Banner -->
+                            <div class="w-full h-36 bg-slate-50 dark:bg-slate-700/50 rounded-xl flex items-center justify-center text-6xl my-2 select-none">
+                                ${product.icon}
+                            </div>
+
+                            <!-- Product Details -->
+                            <div class="mt-4">
+                                <div class="flex justify-between items-start">
+                                    <h3 class="font-bold text-base text-slate-800 dark:text-slate-100">${product.name}</h3>
+                                    <span class="text-xs font-bold text-amber-500 flex items-center">
+                                        <i class="fa-solid fa-star text-[10px] mr-1"></i>${product.rating}
+                                    </span>
+                                </div>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">${product.description}</p>
+                            </div>
+                        </div>
+
+                        <!-- Price and Add to Cart -->
+                        <div class="mt-5 pt-3 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
+                            <div>
+                                <span class="text-xs text-slate-400 block">Price</span>
+                                <span class="text-lg font-extrabold text-slate-900 dark:text-white">₹${product.price.toLocaleString('en-IN')}</span>
+                            </div>
+                            <button onclick="addToCart(${product.id})" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center space-x-1.5 transition shadow-sm active:scale-95">
+                                <i class="fa-solid fa-plus"></i>
+                                <span>Add to Cart</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- 8. CART ACTIONS & LOGIC ---
+        function addToCart(productId) {
+            const product = PRODUCTS.find(p => p.id === productId);
+            const existingItem = state.cart.find(item => item.id === productId);
+
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                state.cart.push({ ...product, quantity: 1 });
+            }
+
+            saveCart();
+            updateCartBadge();
+            showToast(`Added <strong>${product.name}</strong> to cart!`);
+            
+            if (state.currentView === 'cart') {
+                renderCartView();
+            }
+        }
+
+        function updateQuantity(productId, delta) {
+            const item = state.cart.find(i => i.id === productId);
+            if (!item) return;
+
+            item.quantity += delta;
+            if (item.quantity <= 0) {
+                removeFromCart(productId);
+                return;
+            }
+
+            saveCart();
+            updateCartBadge();
+            renderCartView();
+        }
+
+        function setQuantityDirect(productId, val) {
+            const qty = parseInt(val, 10);
+            if (isNaN(qty) || qty <= 0) {
+                removeFromCart(productId);
+                return;
+            }
+            const item = state.cart.find(i => i.id === productId);
+            if (item) {
+                item.quantity = qty;
+                saveCart();
+                updateCartBadge();
+                renderCartView();
+            }
+        }
+
+        function removeFromCart(productId) {
+            const item = state.cart.find(i => i.id === productId);
+            state.cart = state.cart.filter(i => i.id !== productId);
+            saveCart();
+            updateCartBadge();
+            renderCartView();
+            if (item) showToast(`Removed <strong>${item.name}</strong> from cart.`, 'info');
+        }
+
+        function saveCart() {
+            localStorage.setItem('myshop_cart', JSON.stringify(state.cart));
+        }
+
+        function updateCartBadge() {
+            const totalCount = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cart-badge').textContent = totalCount;
+            document.getElementById('nav-cart').textContent = `Cart (${totalCount})`;
+        }
+
+        // --- 9. RENDER SHOPPING CART VIEW ---
+        function renderCartView() {
+            const wrapper = document.getElementById('cart-items-wrapper');
+            
+            if (state.cart.length === 0) {
+                wrapper.innerHTML = `
+                    <div class="bg-white dark:bg-slate-800 rounded-2xl p-8 text-center border border-slate-200 dark:border-slate-700 space-y-4">
+                        <div class="text-6xl">🛒</div>
+                        <h3 class="text-xl font-bold">Your Cart is Empty</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">Looks like you haven't added any products to your shopping cart yet.</p>
+                        <button onclick="navigateTo('products')" class="px-6 py-3 bg-indigo-600 text-white font-semibold text-xs rounded-xl hover:bg-indigo-700 transition">
+                            Shop Now
+                        </button>
+                    </div>
+                `;
+                calculateTotals(0);
+                return;
+            }
+
+            let subtotal = 0;
+
+            wrapper.innerHTML = state.cart.map(item => {
+                const itemSubtotal = item.price * item.quantity;
+                subtotal += itemSubtotal;
+
+                return `
+                    <div class="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+                        <!-- Product info -->
+                        <div class="flex items-center space-x-4 w-full sm:w-auto">
+                            <div class="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-xl flex items-center justify-center text-3xl shrink-0">
+                                ${item.icon}
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm text-slate-800 dark:text-slate-100">${item.name}</h4>
+                                <span class="text-xs text-slate-400">Unit Price: ₹${item.price.toLocaleString('en-IN')}</span>
+                            </div>
+                        </div>
+
+                        <!-- Quantity controls & Subtotal -->
+                        <div class="flex items-center justify-between w-full sm:w-auto space-x-6">
+                            <!-- Qty buttons -->
+                            <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-700/60 p-1 rounded-xl">
+                                <button onclick="updateQuantity(${item.id}, -1)" class="w-7 h-7 bg-white dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm hover:bg-slate-50">&minus;</button>
+                                <input type="number" value="${item.quantity}" onchange="setQuantityDirect(${item.id}, this.value)" class="w-8 text-center bg-transparent text-xs font-bold focus:outline-none">
+                                <button onclick="updateQuantity(${item.id}, 1)" class="w-7 h-7 bg-white dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center font-bold text-xs shadow-sm hover:bg-slate-50">&plus;</button>
+                            </div>
+
+                            <!-- Item Subtotal -->
+                            <div class="text-right min-w-[80px]">
+                                <span class="text-[10px] text-slate-400 block">Subtotal</span>
+                                <span class="text-sm font-bold text-indigo-600 dark:text-indigo-400">₹${itemSubtotal.toLocaleString('en-IN')}</span>
+                            </div>
+
+                            <!-- Remove button -->
+                            <button onclick="removeFromCart(${item.id})" class="text-slate-400 hover:text-red-500 transition p-1" title="Remove Item">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            calculateTotals(subtotal);
+        }
+
+        // --- 10. TOTAL PRICE CALCULATOR & COUPONS ---
+        function calculateTotals(subtotal) {
+            // Delivery rules: Free if subtotal > 1000 or 0 if subtotal is 0, else flat ₹50
+            let deliveryCharge = 0;
+            if (subtotal > 0 && subtotal < 1000) {
+                deliveryCharge = 50;
+            }
+
+            let discountAmount = 0;
+            if (state.appliedCoupon) {
+                discountAmount = Math.round(subtotal * state.couponDiscountRate);
+            }
+
+            const grandTotal = Math.max(0, subtotal + deliveryCharge - discountAmount);
+
+            document.getElementById('summary-subtotal').textContent = `₹${subtotal.toLocaleString('en-IN')}`;
+            document.getElementById('summary-delivery').textContent = deliveryCharge === 0 ? (subtotal > 0 ? 'FREE' : '₹0') : `₹${deliveryCharge}`;
+            
+            const discountRow = document.getElementById('discount-row');
+            if (state.appliedCoupon && subtotal > 0) {
+                discountRow.classList.remove('hidden');
+                document.getElementById('summary-discount').textContent = `-₹${discountAmount.toLocaleString('en-IN')}`;
+            } else {
+                discountRow.classList.add('hidden');
+            }
+
+            document.getElementById('summary-grand-total').textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
+            
+            // Disable checkout button if cart is empty
+            const btnCheckout = document.getElementById('btn-checkout');
+            if (subtotal === 0) {
+                btnCheckout.disabled = true;
+                btnCheckout.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                btnCheckout.disabled = false;
+                btnCheckout.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function applyCoupon() {
+            const input = document.getElementById('coupon-code-input').value.trim().toUpperCase();
+            const msg = document.getElementById('coupon-message');
+
+            if (input === 'MYSHOP10') {
+                state.appliedCoupon = true;
+                msg.textContent = '🎉 Coupon MYSHOP10 applied (10% OFF)';
+                msg.className = 'text-[11px] mt-1 text-emerald-500 font-medium block';
+                renderCartView();
+            } else {
+                msg.textContent = '❌ Invalid Coupon Code. Use MYSHOP10';
+                msg.className = 'text-[11px] mt-1 text-red-500 font-medium block';
+            }
+        }
+
+        function applyBannerCoupon() {
+            document.getElementById('coupon-code-input').value = 'MYSHOP10';
+            navigateTo('cart');
+            applyCoupon();
+        }
+
+        // --- 11. CHECKOUT & ORDER CONFIRMATION ---
+        function openCheckoutModal() {
+            if (state.cart.length === 0) return;
+            
+            // Calculate total for payable label
+            const subtotal = state.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const deliveryCharge = (subtotal > 0 && subtotal < 1000) ? 50 : 0;
+            const discount = state.appliedCoupon ? Math.round(subtotal * state.couponDiscountRate) : 0;
+            const grandTotal = Math.max(0, subtotal + deliveryCharge - discount);
+
+            document.getElementById('checkout-payable-amount').textContent = `₹${grandTotal.toLocaleString('en-IN')}`;
+            document.getElementById('checkout-modal').classList.remove('hidden');
+        }
+
+        function closeCheckoutModal() {
+            document.getElementById('checkout-modal').classList.add('hidden');
+        }
+
+        function handlePlaceOrder(e) {
+            e.preventDefault();
+            closeCheckoutModal();
+
+            // Generate Random Order ID
+            const orderId = '#MS-' + Math.floor(10000 + Math.random() * 90000);
+            document.getElementById('confirm-order-id').textContent = orderId;
+
+            // Clear Cart State
+            state.cart = [];
+            state.appliedCoupon = false;
+            saveCart();
+            updateCartBadge();
+
+            // Show Confirmation Modal
+            document.getElementById('order-confirm-modal').classList.remove('hidden');
+        }
+
+        function closeOrderConfirmModal() {
+            document.getElementById('order-confirm-modal').classList.add('hidden');
+            navigateTo('home');
+        }
+
+        // --- 12. WISHLIST CONTROLLER ---
+        function toggleWishlist(productId) {
+            const index = state.wishlist.indexOf(productId);
+            if (index > -1) {
+                state.wishlist.splice(index, 1);
+                showToast('Removed from wishlist.', 'info');
+            } else {
+                state.wishlist.push(productId);
+                showToast('Added to your wishlist!');
+            }
+            
+            localStorage.setItem('myshop_wishlist', JSON.stringify(state.wishlist));
+            updateWishlistBadge();
+            renderProducts();
+            renderWishlistModal();
+        }
+
+        function updateWishlistBadge() {
+            const badge = document.getElementById('wishlist-badge');
+            if (state.wishlist.length > 0) {
+                badge.textContent = state.wishlist.length;
+                badge.classList.remove('hidden');
+                badge.classList.add('flex');
+            } else {
+                badge.classList.add('hidden');
+                badge.classList.remove('flex');
+            }
+        }
+
+        function toggleWishlistModal() {
+            const modal = document.getElementById('wishlist-modal');
+            const isHidden = modal.classList.contains('hidden');
+            if (isHidden) {
+                renderWishlistModal();
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function renderWishlistModal() {
+            const container = document.getElementById('wishlist-items-container');
+            const items = PRODUCTS.filter(p => state.wishlist.includes(p.id));
+
+            if (items.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">Your wishlist is empty.</p>`;
+                return;
+            }
+
+            container.innerHTML = items.map(item => `
+                <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                    <div class="flex items-center space-x-3">
+                        <span class="text-2xl">${item.icon}</span>
+                        <div>
+                            <h5 class="font-bold text-xs">${item.name}</h5>
+                            <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400">₹${item.price}</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="addToCart(${item.id})" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-semibold">
+                            Add Cart
+                        </button>
+                        <button onclick="toggleWishlist(${item.id})" class="text-slate-400 hover:text-red-500 p-1">
+                            <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- 13. TOAST NOTIFICATION SYSTEM ---
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgColor = type === 'success' 
+                ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900' 
+                : 'bg-red-600 text-white';
+
+            toast.className = `toast-slide p-3 px-4 rounded-xl text-xs font-medium shadow-xl flex items-center space-x-2 ${bgColor} pointer-events-auto`;
+            toast.innerHTML = `
+                <span>${type === 'success' ? '✅' : 'ℹ️'}</span>
+                <div>${message}</div>
+            `;
+
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
